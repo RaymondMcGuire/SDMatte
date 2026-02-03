@@ -54,7 +54,8 @@ DATA_TRAIN_ARGS = {
 }
 
 BG_PATH = "BG-20K/"
-BG_LIST = os.listdir(BG_PATH)
+# Allow running without the BG-20K dataset present (e.g., single-image inference).
+BG_LIST = os.listdir(BG_PATH) if os.path.isdir(BG_PATH) else []
 
 
 def generate_samples_from_refmatte(image_folder_path, alpha_folder_path, json_path):

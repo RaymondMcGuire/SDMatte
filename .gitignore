@@ -3,12 +3,15 @@ __pycache__/
 .history/
 .hypothesis/
 
+customdata/
 infer_output/
 output/
 checkpoints/
 engine/
 dinov2/
 detectron2/
+!submodules/detectron2/
+!submodules/detectron2/**
 
 script/eva.sh
 script/train.sh
