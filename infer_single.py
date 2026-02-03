@@ -83,8 +83,6 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--resize", type=int, default=1024, help="inference size (square)")
-    parser.add_argument("--erode", type=int, default=0, help="Erode mask by N pixels to reduce halo")
-    parser.add_argument("--premultiply", action="store_true", default=True, help="Premultiply RGB by alpha")
     parser.add_argument(
         "--unsafe-load",
         action="store_true",
@@ -196,29 +194,15 @@ def main():
     # forward
     with torch.no_grad():
         pred = model(data)
-        output = pred.flatten(0, 2) * 255.0
-        output = output.detach().cpu().numpy().astype(np.uint8)
-        output = cv2.resize(output, (w, h), interpolation=cv2.INTER_LINEAR)
-        if args.erode > 0:
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (args.erode, args.erode))
-            output = cv2.erode(output, kernel, iterations=1)
+        alpha = pred.flatten(0, 2) * 255.0
+        alpha = alpha.detach().cpu().numpy().astype(np.uint8)
+        alpha = cv2.resize(alpha, (w, h), interpolation=cv2.INTER_LINEAR)
 
-    # Save mask
+    # Save RGBA (foreground with alpha matte)
     os.makedirs(dirname(args.output) or ".", exist_ok=True)
-    cv2.imwrite(args.output, output)
-
-    # Also write RGBA with transparent background next to mask
-    try:
-        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-        alpha = output
-        if args.premultiply:
-            alpha_f = (alpha.astype(np.float32) / 255.0)[:, :, None]
-            img_rgb = (img_rgb.astype(np.float32) * alpha_f).astype(np.uint8)
-        rgba = np.dstack([img_rgb, alpha]).astype(np.uint8)
-        out_rgba = os.path.splitext(args.output)[0] + "_rgba.png"
-        cv2.imwrite(out_rgba, cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGRA))
-    except Exception:
-        pass
+    img_rgb_u8 = (img_rgb * 255.0).astype(np.uint8)
+    rgba = np.dstack([img_rgb_u8, alpha]).astype(np.uint8)
+    cv2.imwrite(args.output, cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGRA))
 
 
 if __name__ == "__main__":
